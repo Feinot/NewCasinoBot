@@ -5,10 +5,20 @@ import (
 	"io"
 	"log"
 	"strconv"
+	"strings"
 
+	"github.com/Feinot/NewCasinoBot/cmd/main/internal/database"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+type Users struct {
+	user_id int
+	balance int
+	dep     int
+	concl   int
+	banned  bool
+	refer   string
+}
 type MyPhotoData struct {
 	FileID string
 }
@@ -112,7 +122,8 @@ func main() {
 				reply = "sub pls"
 				fmt.Println(err)
 			} else {
-				ChecUserOnDb()
+				fmt.Println(int(update.Message.From.ID))
+				addUserTODb(int(update.Message.From.ID), 0, 0, 0, false, "")
 				reply = Menu()
 
 			}
@@ -123,14 +134,15 @@ func main() {
 		case "subs":
 			member.ChatID = int64(CollinkChat)
 			member.UserID = update.Message.From.ID
-
+			//user_id int, balance int, dep int, concl int, banned bool, refer string
 			_, err := bot.GetChatMember(tgbotapi.GetChatMemberConfig{member})
 			if err != nil {
 				reply = "sub pls"
 				fmt.Println(err)
 			} else {
-				ChecUserOnDb()
-				addUserTODb()
+				fmt.Println(int(update.Message.From.ID), "asd")
+				addUserTODb(int(update.Message.From.ID), 0, 0, 0, false, "")
+
 				reply = Menu()
 
 			}
@@ -150,9 +162,23 @@ func main() {
 			bot.Send(msg)
 		case "dart":
 			bot.Send(tgbotapi.NewDiceWithEmoji(update.Message.Chat.ID, "🎰"))
-		default:
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, reply)
-			bot.Send(msg)
+
+		case "Balance":
+			bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, strconv.Itoa(Balns(int(update.Message.Chat.ID)))))
+		case "adding":
+			if update.Message.Chat.ID == int64(adminChat) {
+				result := strings.TrimPrefix(update.Message.Text, "/adding ")
+				b, err := strconv.Atoi(result)
+				//fmt.Println(update.Message.From.ID, update.Message.Chat.ID)
+				if err != nil {
+					fmt.Println(err)
+				}
+				BalanceAdding(int(update.Message.From.ID), b)
+				//int(update.Message.Chat.ID)
+				bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, strconv.Itoa(Balns(int(update.Message.From.ID)))))
+
+			}
+
 		}
 
 		//st := tgbotapi.NewStickerSetConfig(update.Message.Chat.ID, sticer.Emoji)
@@ -174,11 +200,12 @@ func Games() string {
 
 }
 
-func ChecUserOnDb() {}
-func addUserTODb() {
-	//database.AddUserTodb()
+func addUserTODb(user_id int, balance int, dep int, concl int, banned bool, refer string) error {
+	return database.AddUserTodb(user_id, balance, dep, concl, banned, refer)
 }
-func Balns() {}
+func Balns(id int) int {
+	return database.Balance(id)
+}
 func replenishmentBalans() string {
 	return "replenishment CARDNUMBER and attach a screenshot of the deposit, if whona you cancel dep write /menu"
 }
@@ -189,4 +216,8 @@ func URLGenerate(id uint64) string {
 }
 func TwentiWan() {
 	return
+}
+func BalanceAdding(id int, dep int) {
+	database.BalanceAdding(id, dep)
+
 }
